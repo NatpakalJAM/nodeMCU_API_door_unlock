@@ -33,9 +33,9 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 const String months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-int timezone = 7 * 3600; //ตั้งค่า TimeZone ตามเวลาประเทศไทย
-int dst = 0;             //กำหนดค่า Date Swing Time
-unsigned long Unixtime;
+int timezone = 7 * 3600;
+unsigned long dst = 7 * 3600; // thai timezone
+unsigned long nowTime, dstTime;
 
 // Set Static IP
 IPAddress local_IP(192, 168, 1, 99);
@@ -74,7 +74,6 @@ void setup()
   Serial.println();
 
   WIFI_Connect();
-
   API_handler();
 }
 
@@ -134,10 +133,11 @@ void Show_Time()
 {
   // https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
   timeClient.update();
-  Unixtime = timeClient.getEpochTime();
+  nowTime = timeClient.getEpochTime();
+  dstTime = nowTime - dst;
   String formattedTime = timeClient.getFormattedTime();
   //Get a time structure
-  struct tm *ptm = gmtime((time_t *)&Unixtime);
+  struct tm *ptm = gmtime((time_t *)&nowTime);
   int monthDay = ptm->tm_mday;
   int currentMonth = ptm->tm_mon + 1;
   String currentMonthName = months[currentMonth - 1];
@@ -240,32 +240,49 @@ void handlerOpenDoor()
   if (!server.hasArg("token") || server.arg("token") == NULL)
     return handleError(400, "Do not have token");
 
-  // String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoidGVzdCIsInVuaXh0aW1lIjoxNTkyNDgyMjU2fQ.vpwnhHVSiicYBzdt9GyPQ0V32cq0EH3VcZ4czRv4RX8";
+  // String token = "eyJhbGciOiJIUzI1NiIsIm5iZiI6IjE1OTI4MTU1ODkiLCJleHAiOiIxNTkyODMwMDk0IiwidHlwIjoiSldUIn0.eyJuYW1lIjoiTmF0cGFrYWwgSy4ifQ.bJZUtN8XWsK5YXvq7svctK0tpvjz5XbkeFoW6hITVhI";
   String token = server.arg("token");
-  String decodedData;
-  boolean decodedToken = jwt.decodeJWT(token, decodedData);
+  String jsonStrHeader, jsonStrPaylode;
+  boolean decodedToken = jwt.decodeJWT(token, jsonStrHeader, jsonStrPaylode);
   if (!decodedToken)
+  {
     return handleError(400, "JWT token invalid");
+  }
 
-  StaticJsonDocument<200> doc;
-  DeserializationError error = deserializeJson(doc, decodedData);
-  if (error)
-    return handleError(400, "deserialize Json error");
+  StaticJsonDocument<200> jsonHeader;
+  DeserializationError errorHeader = deserializeJson(jsonHeader, jsonStrHeader);
+  if (errorHeader)
+  {
+    return handleError(400, "deserialize Json header error");
+  }
+  StaticJsonDocument<200> jsonPayload;
+  DeserializationError errorPayload = deserializeJson(jsonPayload, jsonStrPaylode);
+  if (errorPayload)
+  {
+    return handleError(400, "deserialize Json payload error");
+  }
 
-  String getName = doc["name"];
-  unsigned long getTime = doc["unixtime"];
-  if (doc["name"] == NULL || doc["unixtime"] == NULL)
-    return handleError(400, "Object name or unixtime is NULL");
+  if (jsonHeader["nbf"] == NULL || jsonHeader["exp"] == NULL || jsonPayload["name"] == NULL)
+  {
+    return handleError(400, "JWT token invalid");
+  }
+
+  unsigned long jwtNbf = jsonHeader["nbf"];
+  unsigned long jwtExp = jsonHeader["exp"];
+  String getName = jsonPayload["name"];
 
   timeClient.update();
-  Unixtime = timeClient.getEpochTime();
-  // String test = String(Unixtime) + " | " + String(getTime) + " | " + String((Unixtime - timeDiff)) + " | " + String((Unixtime + timeDiff));
+  nowTime = timeClient.getEpochTime();
+  dstTime = nowTime - dst;
+  // String test = String(dstTime) + " | " + String(jwtNbf) + " | " + String(jwtExp);
   // Serial.println(test);
-  if ((getTime < (Unixtime - timeDiff)) || (getTime > (Unixtime + timeDiff)))
-    return handleError(400, "invalid time");
+  if ((dstTime < jwtNbf) || (dstTime > jwtExp))
+  {
+    return handleError(400, "Invalid time");
+  }
 
-  String sucess_msg = "door open by " + getName;
-  server.send(200, "text/plain", sucess_msg);
+  String successMsg = "door open by " + getName;
+  server.send(200, "text/plain", successMsg);
   Access_OK(getName);
   return;
 }
@@ -290,6 +307,9 @@ void loop()
     Serial.print("WIFI connection lost ...");
     WIFI_Connect();
   }
+
+  //  boolean state = digitalRead(Door_button);
+  //  Serial.println(state);
 
   server.handleClient();
 

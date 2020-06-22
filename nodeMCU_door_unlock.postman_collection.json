@@ -1,0 +1,75 @@
+{
+	"info": {
+		"_postman_id": "7fb4e296-dd54-4e40-b03f-4b860d93d948",
+		"name": "nodeMCU_door_unlock",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "opendoor",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "esp8266",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "admin",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsIm5iZiI6IjE1OTI4MTU1ODkiLCJleHAiOiIxNTkyODMwMDk0IiwidHlwIjoiSldUIn0.eyJuYW1lIjoiTmF0cGFrYWwgSy4ifQ.bJZUtN8XWsK5YXvq7svctK0tpvjz5XbkeFoW6hITVhI",
+							"type": "text"
+						}
+					],
+					"options": {
+						"urlencoded": {}
+					}
+				},
+				"url": {
+					"raw": "192.168.1.99/open",
+					"host": [
+						"192",
+						"168",
+						"1",
+						"99"
+					],
+					"path": [
+						"open"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "heath check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "192.168.1.99",
+					"host": [
+						"192",
+						"168",
+						"1",
+						"99"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}
