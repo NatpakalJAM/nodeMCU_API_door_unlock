@@ -26,7 +26,7 @@ const char *password = "password";
 const char *www_username = "www_username";
 const char *www_password = "www_password";
 
-String JWT_key = "svnRJ8ZvBxK9SSPq";
+String JWT_key = "JWT_key";
 ArduinoJWT jwt = ArduinoJWT(JWT_key);
 
 // Define NTP Client to get time
@@ -125,12 +125,12 @@ void WIFI_Connect()
   lcd.setCursor(0, 1);
   lcd.print(WiFi.localIP());
 
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("MAC address: ");
-  Serial.println(WiFi.macAddress());
+  // Serial.println("");
+  // Serial.println("WiFi connected.");
+  // Serial.print("IP address: ");
+  // Serial.println(WiFi.localIP());
+  // Serial.print("MAC address: ");
+  // Serial.println(WiFi.macAddress());
 
   digitalWrite(buzzer, HIGH);
   delay(100);
@@ -168,6 +168,7 @@ void beepOpenDoor()
   {
     if (doorOpen)
     {
+      lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print(nameOpenDoor);
       lcd.setCursor(0, 1);
