@@ -12,20 +12,22 @@
 // Load LiquidCrystal_I2C library
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+// Load Timer library
+#include <Timer.h>
 
-LiquidCrystal_I2C lcd(0x3f, 16, 4);
+Timer t;
+
+LiquidCrystal_I2C lcd(0x3f, 16, 2);
 
 // network credentials
-const char *ssid = "username";
+const char *ssid = "ssid";
 const char *password = "password";
 
-const char *www_username = "admin";
-const char *www_password = "esp8266";
+const char *www_username = "www_username";
+const char *www_password = "www_password";
 
-String JWT_key = "ff9eebddfdad95947fd83f52f53f7077"; // QR_open_door
+String JWT_key = "svnRJ8ZvBxK9SSPq";
 ArduinoJWT jwt = ArduinoJWT(JWT_key);
-
-unsigned long timeDiff = 600; // 10 min
 
 // Define NTP Client to get time
 WiFiUDP ntpUDP;
@@ -33,15 +35,15 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 const String months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-int timezone = 7 * 3600;
-unsigned long dst = 7 * 3600; // thai timezone
+int timezone = 7 * 3600; // thai timezone
+unsigned long dst = 7 * 3600;
 unsigned long nowTime, dstTime;
 
 // Set Static IP
-IPAddress local_IP(192, 168, 1, 99);
-IPAddress gateway(192, 168, 1, 1);
+IPAddress local_IP(10, 10, 103, 250);
+IPAddress gateway(10, 10, 103, 1);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress primaryDNS(192, 168, 1, 1);
+IPAddress primaryDNS(8, 8, 8, 8);
 
 // Set web server port number to 80
 ESP8266WebServer server(80);
@@ -52,11 +54,15 @@ const int buzzer = D6;
 const int LED_Denied = D7;
 const int LED_OK = D8;
 
+boolean doorOpen = false;
+int beepCount = 0;
+String nameOpenDoor;
+
 void setup()
 {
   Serial.begin(115200);
   Serial.setDebugOutput(false);
-  lcd.begin();
+  lcd.init();
   lcd.backlight();
 
   // Initialize the output variables
@@ -75,6 +81,9 @@ void setup()
 
   WIFI_Connect();
   API_handler();
+
+  t.every(1000, Show_Time);
+  t.every(100, beepOpenDoor);
 }
 
 void WIFI_Connect()
@@ -126,7 +135,6 @@ void WIFI_Connect()
   digitalWrite(buzzer, HIGH);
   delay(100);
   digitalWrite(buzzer, LOW);
-  delay(3000);
 }
 
 void Show_Time()
@@ -144,73 +152,64 @@ void Show_Time()
   int currentYear = ptm->tm_year + 1900;
   String currentDate = String(currentYear) + "-" + String(currentMonthName) + "-" + String(monthDay);
 
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(currentDate);
-  lcd.setCursor(0, 1);
-  lcd.print(formattedTime);
-
-  delay(1000);
+  if (!doorOpen)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(currentDate);
+    lcd.setCursor(0, 1);
+    lcd.print(formattedTime);
+  }
 }
 
-void Access_OK(String name)
+void beepOpenDoor()
 {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(name);
-  lcd.setCursor(0, 1);
-  lcd.print("Access Allowed!!");
-  digitalWrite(LED_Denied, LOW);
-  digitalWrite(buzzer, HIGH);
-  digitalWrite(LED_OK, HIGH);
-  delay(100);
-  digitalWrite(buzzer, LOW);
-  digitalWrite(LED_OK, LOW);
-  delay(100);
-  digitalWrite(buzzer, HIGH);
-  digitalWrite(LED_OK, HIGH);
-  delay(100);
-  digitalWrite(buzzer, LOW);
-  digitalWrite(LED_OK, LOW);
-  delay(100);
-  digitalWrite(buzzer, HIGH);
-  digitalWrite(LED_OK, HIGH);
-  delay(100);
-  digitalWrite(buzzer, LOW);
-  digitalWrite(LED_OK, LOW);
-  digitalWrite(Door_button, HIGH);
-  delay(2000);
-  digitalWrite(Door_button, LOW);
-}
-
-void Access_Denied(String error)
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Access Denied!!");
-  lcd.setCursor(0, 1);
-  lcd.print(error);
-  digitalWrite(LED_OK, LOW);
-
-  digitalWrite(buzzer, HIGH);
-  digitalWrite(LED_Denied, HIGH);
-  delay(300);
-  digitalWrite(buzzer, LOW);
-  digitalWrite(LED_Denied, LOW);
-  delay(50);
-  digitalWrite(buzzer, HIGH);
-  digitalWrite(LED_Denied, HIGH);
-  delay(700);
-  digitalWrite(buzzer, LOW);
-  digitalWrite(LED_Denied, LOW);
-
-  delay(2000);
+  if (beepCount != 0)
+  {
+    if (doorOpen)
+    {
+      lcd.setCursor(0, 0);
+      lcd.print(nameOpenDoor);
+      lcd.setCursor(0, 1);
+      lcd.print("Access Allowed!!");
+    }
+    if (beepCount == 1)
+    {
+      digitalWrite(buzzer, LOW);
+      digitalWrite(LED_OK, LOW);
+      if (doorOpen)
+      {
+        digitalWrite(Door_button, LOW);
+        doorOpen = false;
+      }
+      beepCount--;
+    }
+    else if (beepCount % 2 == 0)
+    {
+      digitalWrite(buzzer, HIGH);
+      digitalWrite(LED_OK, HIGH);
+      if (doorOpen)
+      {
+        digitalWrite(Door_button, HIGH);
+      }
+      beepCount--;
+    }
+    else
+    {
+      digitalWrite(buzzer, LOW);
+      digitalWrite(LED_OK, LOW);
+      if (doorOpen)
+      {
+        digitalWrite(Door_button, HIGH);
+      }
+      beepCount--;
+    }
+  }
 }
 
 void handleError(int code, String errorMsg)
 {
   server.send(code, "text/plain", errorMsg);
-  Access_Denied(errorMsg);
 }
 
 void handleNotFound()
@@ -235,7 +234,6 @@ void handlerOpenDoor()
   if (!server.authenticate(www_username, www_password))
     return server.requestAuthentication();
   // JWT - Decode a JWT and retreive the payload
-  //bool jwt.decodeJWT(String& jwt, String& payload);
   // https://tttapa.github.io/ESP8266/Chap10%20-%20Simple%20Web%20Server.html
   if (!server.hasArg("token") || server.arg("token") == NULL)
     return handleError(400, "Do not have token");
@@ -271,11 +269,6 @@ void handlerOpenDoor()
   unsigned long jwtExp = jsonHeader["exp"];
   String getName = jsonPayload["name"];
 
-  timeClient.update();
-  nowTime = timeClient.getEpochTime();
-  dstTime = nowTime - dst;
-  // String test = String(dstTime) + " | " + String(jwtNbf) + " | " + String(jwtExp);
-  // Serial.println(test);
   if ((dstTime < jwtNbf) || (dstTime > jwtExp))
   {
     return handleError(400, "Invalid time");
@@ -283,7 +276,12 @@ void handlerOpenDoor()
 
   String successMsg = "door open by " + getName;
   server.send(200, "text/plain", successMsg);
-  Access_OK(getName);
+  if (!doorOpen)
+  {
+    beepCount = 6;
+    nameOpenDoor = getName;
+    doorOpen = true;
+  }
   return;
 }
 
@@ -308,10 +306,7 @@ void loop()
     WIFI_Connect();
   }
 
-  //  boolean state = digitalRead(Door_button);
-  //  Serial.println(state);
+  t.update();
 
   server.handleClient();
-
-  Show_Time();
 }
