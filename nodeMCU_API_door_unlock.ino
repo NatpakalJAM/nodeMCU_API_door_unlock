@@ -20,13 +20,13 @@ Timer t;
 LiquidCrystal_I2C lcd(0x3f, 16, 2);
 
 // network credentials
-const char *ssid = "ssid";
-const char *password = "password";
+const char *ssid = "TrueGigatexFiber_2.4G_6A0";
+const char *password = "64a7u5hn";
 
-const char *www_username = "www_username";
-const char *www_password = "www_password";
+const char *www_username = "admin";
+const char *www_password = "esp8266";
 
-String JWT_key = "JWT_key";
+String JWT_key = "svnRJ8ZvBxK9SSPq";
 ArduinoJWT jwt = ArduinoJWT(JWT_key);
 
 // Define NTP Client to get time
@@ -51,7 +51,6 @@ ESP8266WebServer server(80);
 // Assign output variables to GPIO pins
 const int Door_button = D5;
 const int buzzer = D6;
-const int LED_Denied = D7;
 const int LED_OK = D8;
 
 boolean doorOpen = false;
@@ -69,15 +68,14 @@ void setup()
   pinMode(Door_button, OUTPUT);
   pinMode(buzzer, OUTPUT);
   pinMode(LED_OK, OUTPUT);
-  pinMode(LED_Denied, OUTPUT);
+  digitalWrite(Door_button, LOW);
   digitalWrite(buzzer, LOW);
   digitalWrite(LED_OK, LOW);
-  digitalWrite(LED_Denied, LOW);
 
   jwt.setPSK(JWT_key);
-  Serial.print("JWT_key = ");
-  Serial.println(JWT_key);
-  Serial.println();
+  // Serial.print("JWT_key = ");
+  // Serial.println(JWT_key);
+  // Serial.println();
 
   WIFI_Connect();
   API_handler();
@@ -94,25 +92,22 @@ void WIFI_Connect()
   lcd.print("Connecting to ");
   lcd.setCursor(0, 1);
   lcd.print(ssid);
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  // Serial.print("Connecting to ");
+  // Serial.println(ssid);
 
   // Connect to Wi-Fi network with SSID and password
   WiFi.begin(ssid, password);
   WiFi.config(local_IP, primaryDNS, gateway, subnet);
   while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print(".");
+    // Serial.print(".");
     digitalWrite(LED_OK, HIGH);
-    digitalWrite(LED_Denied, LOW);
     delay(500);
     digitalWrite(LED_OK, LOW);
-    digitalWrite(LED_Denied, HIGH);
     delay(500);
   }
 
   digitalWrite(LED_OK, LOW);
-  digitalWrite(LED_Denied, LOW);
 
   // set real-time clock
   timeClient.begin();
@@ -166,7 +161,7 @@ void beepOpenDoor()
 {
   if (beepCount != 0)
   {
-    if (doorOpen)
+    if (doorOpen && beepCount == 14)
     {
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -174,11 +169,11 @@ void beepOpenDoor()
       lcd.setCursor(0, 1);
       lcd.print("Access Allowed!!");
     }
-    if (beepCount == 1)
+    if (beepCount <= 8)
     {
       digitalWrite(buzzer, LOW);
       digitalWrite(LED_OK, LOW);
-      if (doorOpen)
+      if (doorOpen && beepCount == 1)
       {
         digitalWrite(Door_button, LOW);
         doorOpen = false;
@@ -279,7 +274,7 @@ void handlerOpenDoor()
   server.send(200, "text/plain", successMsg);
   if (!doorOpen)
   {
-    beepCount = 6;
+    beepCount = 14;
     nameOpenDoor = getName;
     doorOpen = true;
   }
@@ -303,7 +298,7 @@ void loop()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print("WIFI connection lost ...");
+    // Serial.print("WIFI connection lost ...");
     WIFI_Connect();
   }
 

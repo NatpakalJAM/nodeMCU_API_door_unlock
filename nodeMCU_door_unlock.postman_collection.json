@@ -30,7 +30,7 @@
 					"urlencoded": [
 						{
 							"key": "token",
-							"value": "eyJhbGciOiJIUzI1NiIsIm5iZiI6IjE1OTI4MTU1ODkiLCJleHAiOiIxNTkyODMwMDk0IiwidHlwIjoiSldUIn0.eyJuYW1lIjoiTmF0cGFrYWwgSy4ifQ.bJZUtN8XWsK5YXvq7svctK0tpvjz5XbkeFoW6hITVhI",
+							"value": "eyJhbGciOiJIUzI1NiIsIm5iZiI6IjE1OTMwOTEwMzMiLCJleHAiOiIxNTkzMDk2NTE0IiwidHlwIjoiSldUIn0.eyJuYW1lIjoiTmF0cGFrYWwgSy4ifQ.qUePBE_lMwvRxCH85izyeF5kiTeMRTVUPqoV2QK5e7M",
 							"type": "text"
 						}
 					],
@@ -39,12 +39,12 @@
 					}
 				},
 				"url": {
-					"raw": "192.168.1.99/open",
+					"raw": "192.168.1.35/open",
 					"host": [
 						"192",
 						"168",
 						"1",
-						"99"
+						"35"
 					],
 					"path": [
 						"open"
@@ -59,12 +59,12 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "192.168.1.99",
+					"raw": "192.168.1.35",
 					"host": [
 						"192",
 						"168",
 						"1",
-						"99"
+						"35"
 					]
 				}
 			},
