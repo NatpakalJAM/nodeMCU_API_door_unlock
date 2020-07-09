@@ -86,6 +86,7 @@ void setup()
 
 void WIFI_Connect()
 {
+  lcd.noDisplay();
   WiFi.disconnect();
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -130,10 +131,12 @@ void WIFI_Connect()
   digitalWrite(buzzer, HIGH);
   delay(100);
   digitalWrite(buzzer, LOW);
+  lcd.noBacklight();
 }
 
 void Show_Time()
 {
+  lcd.noDisplay();
   // https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
   timeClient.update();
   nowTime = timeClient.getEpochTime();
@@ -155,6 +158,7 @@ void Show_Time()
     lcd.setCursor(0, 1);
     lcd.print(formattedTime);
   }
+  lcd.noBacklight();
 }
 
 void beepOpenDoor()
